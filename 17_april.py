@@ -28,34 +28,32 @@ class ComprehensiveOutputVerifier:
         
         # Define the specialist agents
         prompt_analyzer = Agent(
-            role="Prompt Rules Specialist",
-            goal="Extract and interpret all rules from the prompt template",
-            backstory="You specialize in understanding prompt engineering patterns and requirements. You can translate abstract prompt templates into concrete extraction and formatting rules.",
+            role="Prompt Rules & Accuracy Specialist",
+            goal="Extract and interpret all rules from prompt templates with maximum precision and accuracy"",
+            backstory="You specialize in understanding prompt engineering patterns and requirements with exceptional attention to detail. You can translate abstract prompt templates into concrete extraction and formatting rules while ensuring complete accuracy and capturing all nuances.",
             verbose=True,
             llm=self.llm
         )
         
         fact_verifier = Agent(
             role="Factual Verification Expert",
-            goal="Verify if facts in the output accurately reflect the input context",
-            backstory="You're a meticulous fact-checker with years of experience verifying information accuracy. You compare output claims against source material to determine correctness.",
+            goal="Verify with maximum precision if facts in the output accurately reflect the input context",
+            backstory="You're a meticulous fact-checker with years of experience verifying information accuracy. You systematically compare each output claim against source material, flagging even minor discrepancies and ensuring complete fidelity to the original context.",
             verbose=True,
             llm=self.llm
         )
         
         format_verifier = Agent(
             role="Format Compliance Expert",
-            goal="Verify if the output follows all formatting and structural rules from the prompt template",
-            backstory="You specialize in analyzing document structure and format requirements. You can detect even subtle deviations from requested formats and structures.",
-            verbose=True,
+            goal="Verify with maximum precision if the output follows all formatting and structural rules from the prompt template",
+            backstory="You specialize in analyzing document structure and format requirements with exceptional attention to detail. You can detect even the most subtle deviations from requested formats, structures, and stylistic guidelines while ensuring complete adherence to specifications.",
             llm=self.llm
         )
         
         metrics_analyst = Agent(
             role="Metrics Analyst",
-            goal="Calculate precision, recall, F1 score and rule compliance metrics",
-            backstory="You're a data scientist specializing in evaluation metrics for NLP tasks. You can quantify both fact extraction accuracy and rule compliance.",
-            verbose=True,
+            goal="Calculate precision, recall, F1 score and rule compliance metrics with statistical rigor and comprehensive analysis",
+            backstory="You're a senior data scientist specializing in evaluation metrics for NLP tasks with expertise in statistical analysis and performance measurement. You can quantify both fact extraction accuracy and rule compliance with exceptional precision, providing detailed confidence intervals and significance testing.",
             llm=self.llm
         )
         
