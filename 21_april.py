@@ -60,111 +60,119 @@ performance_calculator = Agent(
     verbose=True
 )
 
-# Tasks for each agent
-analyze_document_task = Task(
-    description="""
-    Analyze the provided input context extracted from PDFs.
-    Identify all available sections and data points in the source material.
-    Create a structured inventory of all data available in the source.
-    
-    Input Context: {input_context}
-    
-    Return your analysis as a structured list of all identified sections and data points.
-    """,
-    agent=document_analyzer,
-    expected_output="A structured inventory of all sections and data points in the source material."
-)
-
-inspect_prompt_task = Task(
-    description="""
-    Analyze the provided prompt template.
-    Identify all 12 requested data points/posts specified in the prompt.
-    Create a clear checklist of what should be present in the final output.
-    
-    Prompt Template: {prompt_template}
-    
-    Return your analysis as a structured checklist of all requested data points.
-    """,
-    agent=prompt_inspector,
-    expected_output="A structured checklist of all 12 requested data points from the prompt template."
-)
-
-validate_output_task = Task(
-    description="""
-    Cross-reference the final output against both the source context and prompt requirements.
-    For each requested data point, determine if it is:
-    - Found and correct
-    - Found but incorrect
-    - Missing
-    - Not applicable
-    
-    Input Context: {input_context}
-    Requested Data Points: {requested_data_points}
-    Final Output: {final_output}
-    
-    Return your validation results for each requested data point.
-    """,
-    agent=output_validator,
-    expected_output="Validation results for each requested data point."
-)
-
-calculate_performance_task = Task(
-    description="""
-    Calculate performance metrics based on validation results:
-    - Hit rate: number of approved sections / total sections
-    - Additional relevant metrics
-    
-    Validation Results: {validation_results}
-    
-    Return a comprehensive performance report with metrics and suggestions for improvement.
-    """,
-    agent=performance_calculator,
-    expected_output="A comprehensive performance report with metrics and suggestions for improvement."
-)
-
 class PDFExtractionAssessmentCrew:
     def __init__(self, input_context: str, prompt_template: str, final_output: str):
         self.input_context = input_context
         self.prompt_template = prompt_template
         self.final_output = final_output
         
-        # Initialize the crew with agents and tasks
-        self.crew = Crew(
-            agents=[document_analyzer, prompt_inspector, output_validator, performance_calculator],
-            tasks=[analyze_document_task, inspect_prompt_task, validate_output_task, calculate_performance_task],
-            process=Process.sequential,
-            verbose=True
+        # Define Tasks
+        self.analyze_document_task = Task(
+            description=f"""
+            Analyze the provided input context extracted from PDFs.
+            Identify all available sections and data points in the source material.
+            Create a structured inventory of all data available in the source.
+            
+            Input Context: {input_context}
+            
+            Return your analysis as a structured list of all identified sections and data points.
+            """,
+            agent=document_analyzer,
+            expected_output="A structured inventory of all sections and data points in the source material."
         )
+        
+        # This task will be created with document analysis results when run
+        self.inspect_prompt_task = None
+        self.validate_output_task = None
+        self.calculate_performance_task = None
     
     def run_assessment(self) -> PerformanceMetrics:
         """Run the full assessment process and return performance metrics"""
         
-        # Step 1: Analyze the document
-        document_analysis = self.crew.tasks[0].execute(
-            input_context=self.input_context
+        # Step 1: Create and run document analysis crew
+        document_crew = Crew(
+            agents=[document_analyzer],
+            tasks=[self.analyze_document_task],
+            verbose=True
+        )
+        document_analysis = document_crew.kickoff()
+        
+        # Step 2: Create and run prompt inspection crew
+        self.inspect_prompt_task = Task(
+            description=f"""
+            Analyze the provided prompt template.
+            Identify all 12 requested data points/posts specified in the prompt.
+            Create a clear checklist of what should be present in the final output.
+            
+            Prompt Template: {self.prompt_template}
+            
+            Return your analysis as a structured checklist of all requested data points.
+            """,
+            agent=prompt_inspector,
+            expected_output="A structured checklist of all 12 requested data points from the prompt template."
         )
         
-        # Step 2: Inspect the prompt
-        prompt_inspection = self.crew.tasks[1].execute(
-            prompt_template=self.prompt_template
+        prompt_crew = Crew(
+            agents=[prompt_inspector],
+            tasks=[self.inspect_prompt_task],
+            verbose=True
+        )
+        prompt_inspection = prompt_crew.kickoff()
+        
+        # Step 3: Create and run output validation crew
+        self.validate_output_task = Task(
+            description=f"""
+            Cross-reference the final output against both the source context and prompt requirements.
+            For each requested data point, determine if it is:
+            - Found and correct
+            - Found but incorrect
+            - Missing
+            - Not applicable
+            
+            Input Context: {self.input_context}
+            Requested Data Points: {prompt_inspection}
+            Final Output: {self.final_output}
+            
+            Return your validation results for each requested data point.
+            """,
+            agent=output_validator,
+            expected_output="Validation results for each requested data point."
         )
         
-        # Step 3: Validate the output
-        validation_results = self.crew.tasks[2].execute(
-            input_context=self.input_context,
-            requested_data_points=prompt_inspection,
-            final_output=self.final_output
+        validation_crew = Crew(
+            agents=[output_validator],
+            tasks=[self.validate_output_task],
+            verbose=True
+        )
+        validation_results = validation_crew.kickoff()
+        
+        # Step 4: Create and run performance calculation crew
+        self.calculate_performance_task = Task(
+            description=f"""
+            Calculate performance metrics based on validation results:
+            - Hit rate: number of approved sections / total sections
+            - Additional relevant metrics
+            
+            Validation Results: {validation_results}
+            Document Analysis: {document_analysis}
+            
+            Return a comprehensive performance report with metrics and suggestions for improvement.
+            """,
+            agent=performance_calculator,
+            expected_output="A comprehensive performance report with metrics and suggestions for improvement."
         )
         
-        # Step 4: Calculate performance
-        performance_report = self.crew.tasks[3].execute(
-            validation_results=validation_results
+        performance_crew = Crew(
+            agents=[performance_calculator],
+            tasks=[self.calculate_performance_task],
+            verbose=True
         )
+        performance_report = performance_crew.kickoff()
         
         # Extract metrics from the performance report
         metrics = self._extract_metrics(performance_report, validation_results)
         
-        return metrics
+        return metrics, performance_report
     
     def _extract_metrics(self, performance_report: str, validation_results: str) -> PerformanceMetrics:
         """Extract structured metrics from the performance report"""
@@ -207,10 +215,8 @@ class PDFExtractionAssessmentCrew:
             section_details=data_points
         )
     
-    def generate_report(self, metrics: PerformanceMetrics = None) -> str:
+    def generate_report(self, metrics: PerformanceMetrics) -> str:
         """Generate a formatted report from performance metrics"""
-        if metrics is None:
-            metrics = self.run_assessment()
         
         report = f"""
         # PDF Extraction Performance Assessment Report
@@ -237,10 +243,10 @@ def run_pdf_assessment(input_context, prompt_template, final_output):
         final_output=final_output
     )
     
-    metrics = crew.run_assessment()
+    metrics, performance_report = crew.run_assessment()
     report = crew.generate_report(metrics)
     
-    return report
+    return report, performance_report
 
 # Example:
 if __name__ == "__main__":
@@ -249,5 +255,5 @@ if __name__ == "__main__":
     prompt_template = """Template with 12 required data points..."""
     final_output = """Final output generated based on the prompt..."""
     
-    report = run_pdf_assessment(input_context, prompt_template, final_output)
+    report, raw_performance = run_pdf_assessment(input_context, prompt_template, final_output)
     print(report)
