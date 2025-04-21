@@ -86,7 +86,7 @@ class PDFExtractionAssessmentCrew:
         self.validate_output_task = None
         self.calculate_performance_task = None
     
-    def run_assessment(self) -> PerformanceMetrics:
+    def run_assessment(self) -> tuple:
         """Run the full assessment process and return performance metrics"""
         
         # Step 1: Create and run document analysis crew
@@ -95,7 +95,9 @@ class PDFExtractionAssessmentCrew:
             tasks=[self.analyze_document_task],
             verbose=True
         )
-        document_analysis = document_crew.kickoff()
+        document_analysis_output = document_crew.kickoff()
+        # Access the actual result text
+        document_analysis = document_analysis_output.raw_output
         
         # Step 2: Create and run prompt inspection crew
         self.inspect_prompt_task = Task(
@@ -117,7 +119,9 @@ class PDFExtractionAssessmentCrew:
             tasks=[self.inspect_prompt_task],
             verbose=True
         )
-        prompt_inspection = prompt_crew.kickoff()
+        prompt_inspection_output = prompt_crew.kickoff()
+        # Access the actual result text
+        prompt_inspection = prompt_inspection_output.raw_output
         
         # Step 3: Create and run output validation crew
         self.validate_output_task = Task(
@@ -144,7 +148,9 @@ class PDFExtractionAssessmentCrew:
             tasks=[self.validate_output_task],
             verbose=True
         )
-        validation_results = validation_crew.kickoff()
+        validation_results_output = validation_crew.kickoff()
+        # Access the actual result text
+        validation_results = validation_results_output.raw_output
         
         # Step 4: Create and run performance calculation crew
         self.calculate_performance_task = Task(
@@ -167,7 +173,9 @@ class PDFExtractionAssessmentCrew:
             tasks=[self.calculate_performance_task],
             verbose=True
         )
-        performance_report = performance_crew.kickoff()
+        performance_report_output = performance_crew.kickoff()
+        # Access the actual result text
+        performance_report = performance_report_output.raw_output
         
         # Extract metrics from the performance report
         metrics = self._extract_metrics(performance_report, validation_results)
@@ -179,33 +187,34 @@ class PDFExtractionAssessmentCrew:
         
         # Parse validation results to get data points
         data_points = []
-        validation_lines = validation_results.strip().split('\n')
-        
-        for line in validation_lines:
-            if ':' in line and any(status in line.lower() for status in ['found', 'missing', 'correct', 'incorrect']):
-                name = line.split(':')[0].strip()
-                found = 'found' in line.lower() and 'not found' not in line.lower()
-                correct = 'correct' in line.lower() and 'incorrect' not in line.lower()
-                details = line.split(':', 1)[1].strip() if ':' in line else ""
-                
-                data_points.append(DataPoint(
-                    name=name,
-                    found=found,
-                    correct=correct,
-                    details=details
-                ))
+        if validation_results:
+            validation_lines = validation_results.strip().split('\n')
+            
+            for line in validation_lines:
+                if ':' in line and any(status in line.lower() for status in ['found', 'missing', 'correct', 'incorrect']):
+                    name = line.split(':')[0].strip()
+                    found = 'found' in line.lower() and 'not found' not in line.lower()
+                    correct = 'correct' in line.lower() and 'incorrect' not in line.lower()
+                    details = line.split(':', 1)[1].strip() if ':' in line else ""
+                    
+                    data_points.append(DataPoint(
+                        name=name,
+                        found=found,
+                        correct=correct,
+                        details=details
+                    ))
         
         # Extract hit rate metrics
         hit_rate_pattern = r"Hit Rate:?\s*(\d+\.?\d*)%?"
-        hit_rate_match = re.search(hit_rate_pattern, performance_report)
+        hit_rate_match = re.search(hit_rate_pattern, performance_report) if performance_report else None
         hit_rate = float(hit_rate_match.group(1))/100 if hit_rate_match else 0.0
         
         total_pattern = r"Total Sections:?\s*(\d+)"
-        total_match = re.search(total_pattern, performance_report)
+        total_match = re.search(total_pattern, performance_report) if performance_report else None
         total_sections = int(total_match.group(1)) if total_match else len(data_points)
         
         approved_pattern = r"Approved Sections:?\s*(\d+)"
-        approved_match = re.search(approved_pattern, performance_report)
+        approved_match = re.search(approved_pattern, performance_report) if performance_report else None
         approved_sections = int(approved_match.group(1)) if approved_match else sum(1 for dp in data_points if dp.found and dp.correct)
         
         return PerformanceMetrics(
