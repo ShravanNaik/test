@@ -67,27 +67,38 @@ class ComprehensiveOutputVerifier:
         
         # Define the tasks
         task_extract_rules = Task(
-            description=f"""
-            Analyze the prompt template and extract TWO types of rules:
-            1. Content extraction rules (what facts should be extracted)
-            2. Format/structure rules (how the output should be formatted)
-            
-            Prompt Template:
-            {self.prompt_template}
-            
-            Your output should be a structured JSON with two sections:
-            1. "content_rules": List of rules about what facts should be extracted
-            2. "format_rules": List of rules about output structure, formatting, etc.
-            
-            For each rule, include:
-            - "rule_id": A unique identifier (C1, C2... for content rules, F1, F2... for format rules)
-            - "description": Clear description of the rule
-            - "importance": "critical", "important", or "minor"
-            
-            Be thorough and specific in identifying ALL rules in the prompt template.
-            """,
-            agent=prompt_analyzer
-        )
+    description=f"""
+    Analyze the prompt template EXHAUSTIVELY and extract TWO types of rules:
+    1. Content extraction rules (what facts/information should be extracted)
+    2. Format/structure rules (how the output should be formatted)
+    
+    Prompt Template:
+    {self.prompt_template}
+    
+    IMPORTANT: Be extremely thorough. Look for:
+    - Explicit instructions (directly stated rules)
+    - Implicit instructions (implied rules)
+    - Requirements about what content to include/exclude
+    - Instructions about organization, formatting, style, tone
+    - Requirements for specific sections, headers, bullet points
+    - Instructions about how to handle certain types of information
+    - Any conditional rules (if X appears, then do Y)
+    
+    Your output should be a structured JSON with two sections:
+    1. "content_rules": List of rules about what facts/information should be extracted
+    2. "format_rules": List of rules about output structure, formatting, style, etc.
+    
+    For each rule, include:
+    - "rule_id": A unique identifier (C1, C2... for content rules, F1, F2... for format rules)
+    - "description": Clear description of the rule
+    - "importance": "critical", "important", or "minor"
+    
+    Be extremely thorough and specific in identifying ALL rules in the prompt template. Missing rules will significantly impact verification quality.
+    
+    Before finalizing your response, review the prompt template one more time specifically looking for any rules you might have missed.
+    """,
+    agent=prompt_analyzer
+)
         
         task_verify_facts = Task(
             description=f"""
