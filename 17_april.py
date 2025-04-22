@@ -36,9 +36,9 @@ class ComprehensiveOutputVerifier:
         )
         
         fact_verifier = Agent(
-            role="Factual Verification Expert",
-            goal="Verify with maximum precision if facts in the output accurately reflect the input context",
-            backstory="You're a meticulous fact-checker with years of experience verifying information accuracy. You systematically compare each output claim against source material, flagging even minor discrepancies and ensuring complete fidelity to the original context.",
+            role="Rule-Based Factual Verification Expert",
+            goal="Systematically verify each of the 10 content rules with maximum precision and detailed evidence-based analysis",
+            backstory="You are a meticulous fact-checker with specialized expertise in rule-based content verification. Your unique skill is methodically comparing structured outputs against source materials while maintaining perfect organization across multiple verification criteria. You approach verification by examining each rule individually, gathering evidence from the source text, and providing detailed explanations supported by direct quotes. You're particularly skilled at detecting subtle discrepancies, omissions, and misrepresentations that others might miss.",
             verbose=True,
             llm=self.llm
         )
@@ -113,38 +113,111 @@ class ComprehensiveOutputVerifier:
         )
         
         task_verify_facts = Task(
-            description=f"""
-            Verify if the facts in the final output accurately reflect the facts in the input context according to the content rules.
-            
-            Input Context:
-            {self.input_context[:10000]}... (if the context is longer, please analyze it entirely)
-            
-            Final Output:
-            {self.final_output}
-            
-            Content Rules:
-            {{task_extract_rules}}
-            
-            For each fact/statement in the final output:
-            1. Check if it exists in the input context
-            2. Verify if it was extracted according to the relevant content rule
-            3. Verify if it's accurately represented without distortion
-            
-            Create a detailed verification report with:
-            1. True positives: Facts correctly extracted from the input context
-            2. False positives: Facts in the output that are either not in the input context or significantly distorted
-            3. False negatives: Key facts in the input context that should have been extracted according to the rules but were missed
-            
-            Format your response as a JSON object with these three categories.
-            Each fact should include:
-            - "fact_text": The text of the fact
-            - "rule_id": Which rule it corresponds to
-            - "verified": true/false (whether it accurately reflects the input context)
-            - "explanation": Brief explanation of verification result
-            """,
-            agent=fact_verifier,
-            depends_on=[task_extract_rules]
-        )
+        description=f"""
+        Systematically verify if the facts in the final output accurately reflect the input context according to the 10 specific content rules (C1-C10).
+        
+        Input Context:
+        {self.input_context[:10000]}... (if the context is longer, please analyze it entirely)
+        
+        Final Output:
+        {self.final_output}
+        
+        Content Rules:
+        {{task_extract_rules}}
+        
+        VERIFICATION PROCESS:
+        
+        STEP 1: RULE-BY-RULE VERIFICATION
+        For EACH of the 10 content rules (C1-C10):
+        1. Identify the specific content in the output that corresponds to this rule
+        2. Find the corresponding information in the input context
+        3. Verify if the extracted information is:
+           - PRESENT (was the required information included?)
+           - ACCURATE (does it match what's in the input context?)
+           - COMPLETE (was all required information for this rule included?)
+        
+        STEP 2: FACT CATEGORIZATION
+        Categorize each extracted piece of information as:
+        1. TRUE POSITIVE: Information correctly extracted according to the rule
+        2. FALSE POSITIVE: Information that is either:
+           - Not present in the input context
+           - Significantly distorted from what appears in the input context
+           - Not relevant to the rule it claims to address
+        3. FALSE NEGATIVE: Key information in the input context that should have been extracted according to the rule but was missed
+        
+        Format your response as a structured JSON with these sections:
+        
+        ```json
+        {
+          "rule_based_verification": {
+            "C1": {
+              "rule_description": "[Copy the rule description here]",
+              "content_in_output": "[The content found in the output for this rule]",
+              "expected_from_input": "[What should have been extracted from input]",
+              "present": true/false,
+              "accurate": true/false,
+              "complete": true/false,
+              "verification_notes": "[Detailed explanation of your findings]"
+            },
+            "C2": {
+              // Same structure as C1
+            },
+            // ... Continue for C3-C10
+          },
+          "fact_categorization": {
+            "true_positives": [
+              {
+                "rule_id": "C1",
+                "fact_text": "[The correctly extracted fact]",
+                "location_in_input": "[Where this appears in the input]",
+                "verification": "[Why this is correct]"
+              },
+              // Additional true positives
+            ],
+            "false_positives": [
+              {
+                "rule_id": "C3",
+                "incorrect_fact": "[The incorrect information in output]",
+                "actual_input": "[What the input actually says, if anything]",
+                "issue_type": "not_in_input|distortion|irrelevant",
+                "explanation": "[Detailed explanation of the error]"
+              },
+              // Additional false positives
+            ],
+            "false_negatives": [
+              {
+                "rule_id": "C5",
+                "missing_fact": "[Information that should have been included]",
+                "location_in_input": "[Where this appears in the input]",
+                "importance": "critical|important|minor",
+                "explanation": "[Why this information should have been included]"
+              },
+              // Additional false negatives
+            ]
+          },
+          "summary_statistics": {
+            "rules_fully_satisfied": 0, // Count of rules with present=true, accurate=true, complete=true
+            "rules_partially_satisfied": 0, // Count of rules with some issues
+            "rules_not_satisfied": 0, // Count of rules with major issues
+            "true_positives_count": 0,
+            "false_positives_count": 0,
+            "false_negatives_count": 0
+          }
+        }
+        ```
+        
+        IMPORTANT VERIFICATION GUIDELINES:
+        - Be extremely thorough in checking EACH of the 10 content rules
+        - For each rule, explicitly state what was found in the output and what was expected based on the input
+        - Pay special attention to facts that might be partially correct but missing important details
+        - Note instances where the output contains speculative information not found in the input
+        - If the input context doesn't contain information related to a specific rule, note this explicitly
+        
+        Your thoroughness in this verification is CRITICAL for an accurate assessment of the output quality.
+        """,
+        agent=fact_verifier,
+        depends_on=[task_extract_rules]  # Or depends on task_validate_rules if you implemented that
+    )
         
         task_verify_format = Task(
             description=f"""
