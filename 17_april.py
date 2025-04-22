@@ -29,8 +29,8 @@ class ComprehensiveOutputVerifier:
         # Define the specialist agents
         prompt_analyzer = Agent(
             role="Prompt Rules & Accuracy Specialist",
-            goal="Extract and interpret all rules from prompt templates with maximum precision and accuracy"",
-            backstory="You specialize in understanding prompt engineering patterns and requirements with exceptional attention to detail. You can translate abstract prompt templates into concrete extraction and formatting rules while ensuring complete accuracy and capturing all nuances.",
+            goal="Extract exactly 10 content extraction rules and all formatting rules with maximum precision and structure",
+            backstory="You specialize in systematic prompt analysis with exceptional attention to detail. Your expertise is breaking down complex prompts into clearly defined rule sets, particularly when they contain numbered requirements. You excel at identifying both the explicit content extraction requirements and the formatting specifications needed for perfect output compliance.",
             verbose=True,
             llm=self.llm
         )
@@ -67,38 +67,50 @@ class ComprehensiveOutputVerifier:
         
         # Define the tasks
         task_extract_rules = Task(
-    description=f"""
-    Analyze the prompt template EXHAUSTIVELY and extract TWO types of rules:
-    1. Content extraction rules (what facts/information should be extracted)
-    2. Format/structure rules (how the output should be formatted)
-    
-    Prompt Template:
-    {self.prompt_template}
-    
-    IMPORTANT: Be extremely thorough. Look for:
-    - Explicit instructions (directly stated rules)
-    - Implicit instructions (implied rules)
-    - Requirements about what content to include/exclude
-    - Instructions about organization, formatting, style, tone
-    - Requirements for specific sections, headers, bullet points
-    - Instructions about how to handle certain types of information
-    - Any conditional rules (if X appears, then do Y)
-    
-    Your output should be a structured JSON with two sections:
-    1. "content_rules": List of rules about what facts/information should be extracted
-    2. "format_rules": List of rules about output structure, formatting, style, etc.
-    
-    For each rule, include:
-    - "rule_id": A unique identifier (C1, C2... for content rules, F1, F2... for format rules)
-    - "description": Clear description of the rule
-    - "importance": "critical", "important", or "minor"
-    
-    Be extremely thorough and specific in identifying ALL rules in the prompt template. Missing rules will significantly impact verification quality.
-    
-    Before finalizing your response, review the prompt template one more time specifically looking for any rules you might have missed.
-    """,
-    agent=prompt_analyzer
-)
+            description=f"""
+            The prompt template contains EXACTLY 10 specific content extraction points (numbered 1-10) plus several markdown formatting requirements. Your task is to:
+            
+            1. Identify and extract each of the 10 content extraction points as separate content rules (C1-C10)
+            2. Identify all formatting and structural requirements for the markdown output as separate format rules (F1, F2, etc.)
+            
+            Prompt Template:
+            {self.prompt_template}
+            
+            SYSTEMATIC APPROACH:
+            
+            STEP 1: CONTENT RULES EXTRACTION
+            - Look for the 10 numbered points in the prompt (they may be formatted as "1.", "1)", "Point 1:", etc.)
+            - For each numbered point (1-10), create a separate content rule
+            - Capture the EXACT requirement from each point, preserving any specific terminology
+            - Each content rule should focus on ONE distinct type of information to extract
+            
+            STEP 2: FORMAT RULES EXTRACTION
+            - Look for ALL instructions about how to structure or format the output
+            - Include rules about markdown formatting (headers, lists, bold/italic text, etc.)
+            - Include rules about organization, section order, or hierarchical structure
+            - Include rules about styling, tone, length limitations, etc.
+            - Include any rules about how specific types of content should be presented
+            
+            Your output MUST be a structured JSON with two sections:
+            1. "content_rules": EXACTLY 10 rules (C1-C10) mapping to each numbered point
+            2. "format_rules": All identified formatting/structural requirements
+            
+            For each rule, include:
+            - "rule_id": A unique identifier (C1-C10 for content rules, F1, F2... for format rules)
+            - "description": Clear description of the rule (use exact wording from prompt where possible)
+            - "importance": "critical", "important", or "minor"
+            - "source_text": The exact text from the prompt that this rule is derived from
+            
+            VERIFICATION CHECKLIST:
+            - Have you identified EXACTLY 10 content rules (C1-C10)?
+            - Does each content rule directly correspond to one of the 10 numbered points?
+            - Have you captured ALL formatting requirements for the markdown output?
+            - Have you preserved the exact terminology and requirements from the prompt?
+            
+            This task is CRITICAL for the accuracy of the entire verification system.
+            """,
+            agent=prompt_analyzer
+        )
         
         task_verify_facts = Task(
             description=f"""
