@@ -1,0 +1,106 @@
+task_verify_facts = Task(
+    description=f"""
+    Systematically verify if the facts in the final output accurately reflect the input context according to the 10 specific content rules (C1-C10).
+    
+    Input Context:
+    {self.input_context[:10000]}... (if the context is longer, please analyze it entirely)
+    
+    Final Output:
+    {self.final_output}
+    
+    Content Rules:
+    {{task_extract_rules}}
+    
+    VERIFICATION PROCESS:
+    
+    STEP 1: RULE-BY-RULE VERIFICATION
+    For EACH of the 10 content rules (C1-C10):
+    1. Identify the specific content in the output that corresponds to this rule
+    2. Find the corresponding information in the input context
+    3. Verify if the extracted information is:
+       - PRESENT (was the required information included?)
+       - ACCURATE (does it match what's in the input context?)
+       - COMPLETE (was all required information for this rule included?)
+    
+    STEP 2: FACT CATEGORIZATION
+    Categorize each extracted piece of information as:
+    1. TRUE POSITIVE: Information correctly extracted according to the rule
+    2. FALSE POSITIVE: Information that is either:
+       - Not present in the input context
+       - Significantly distorted from what appears in the input context
+       - Not relevant to the rule it claims to address
+    3. FALSE NEGATIVE: Key information in the input context that should have been extracted according to the rule but was missed
+    
+    Format your response as a structured JSON with these sections:
+    
+    ```json
+    {
+      "rule_based_verification": {
+        "C1": {
+          "rule_description": "[Copy the rule description here]",
+          "content_in_output": "[The content found in the output for this rule]",
+          "expected_from_input": "[What should have been extracted from input]",
+          "present": true/false,
+          "accurate": true/false,
+          "complete": true/false,
+          "verification_notes": "[Detailed explanation of your findings]"
+        },
+        "C2": {
+          // Same structure as C1
+        },
+        // ... Continue for C3-C10
+      },
+      "fact_categorization": {
+        "true_positives": [
+          {
+            "rule_id": "C1",
+            "fact_text": "[The correctly extracted fact]",
+            "location_in_input": "[Where this appears in the input]",
+            "verification": "[Why this is correct]"
+          },
+          // Additional true positives
+        ],
+        "false_positives": [
+          {
+            "rule_id": "C3",
+            "incorrect_fact": "[The incorrect information in output]",
+            "actual_input": "[What the input actually says, if anything]",
+            "issue_type": "not_in_input|distortion|irrelevant",
+            "explanation": "[Detailed explanation of the error]"
+          },
+          // Additional false positives
+        ],
+        "false_negatives": [
+          {
+            "rule_id": "C5",
+            "missing_fact": "[Information that should have been included]",
+            "location_in_input": "[Where this appears in the input]",
+            "importance": "critical|important|minor",
+            "explanation": "[Why this information should have been included]"
+          },
+          // Additional false negatives
+        ]
+      },
+      "summary_statistics": {
+        "rules_fully_satisfied": 0, // Count of rules with present=true, accurate=true, complete=true
+        "rules_partially_satisfied": 0, // Count of rules with some issues
+        "rules_not_satisfied": 0, // Count of rules with major issues
+        "true_positives_count": 0,
+        "false_positives_count": 0,
+        "false_negatives_count": 0
+      }
+    }
+    ```
+    
+    IMPORTANT VERIFICATION GUIDELINES:
+    - Be extremely thorough in checking EACH of the 10 content rules
+    - For each rule, explicitly state what was found in the output and what was expected based on the input
+    - Pay special attention to facts that might be partially correct but missing important details
+    - Note instances where the output contains speculative information not found in the input
+    - If the input context doesn't contain information related to a specific rule, note this explicitly
+    
+    Your thoroughness in this verification is CRITICAL for an accurate assessment of the output quality.
+    """,
+    agent=fact_verifier,
+    depends_on=[task_extract_rules]  # Or depends on task_validate_rules if you implemented that
+)
