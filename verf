@@ -1,106 +1,113 @@
-task_verify_facts = Task(
+format_verifier = Agent(
+    role="Format Compliance Expert",
+    goal="Verify with maximum precision if the output follows all formatting and structural rules from the prompt template",
+    backstory="You specialize in analyzing document structure and format requirements with exceptional attention to detail. You can detect even the most subtle deviations from requested formats, structures, and stylistic guidelines. You have a methodical approach to verifying each formatting rule individually and providing clear evidence of compliance or violation.",
+    verbose=True,
+    llm=self.llm
+)
+
+task_verify_format = Task(
     description=f"""
-    Systematically verify if the facts in the final output accurately reflect the input context according to the 10 specific content rules (C1-C10).
-    
-    Input Context:
-    {self.input_context[:10000]}... (if the context is longer, please analyze it entirely)
+    Systematically verify if the final output follows all formatting and structural rules extracted from the prompt template.
     
     Final Output:
     {self.final_output}
     
-    Content Rules:
+    Format Rules:
     {{task_extract_rules}}
     
     VERIFICATION PROCESS:
     
     STEP 1: RULE-BY-RULE VERIFICATION
-    For EACH of the 10 content rules (C1-C10):
-    1. Identify the specific content in the output that corresponds to this rule
-    2. Find the corresponding information in the input context
-    3. Verify if the extracted information is:
-       - PRESENT (was the required information included?)
-       - ACCURATE (does it match what's in the input context?)
-       - COMPLETE (was all required information for this rule included?)
+    For EACH format rule identified:
+    1. Examine the final output to determine if it complies with this specific rule
+    2. Provide specific evidence from the output showing compliance or violation
+    3. For any violations, explain exactly what's missing or incorrect
+    4. Assess the severity of any violation (high/medium/low)
     
-    STEP 2: FACT CATEGORIZATION
-    Categorize each extracted piece of information as:
-    1. TRUE POSITIVE: Information correctly extracted according to the rule
-    2. FALSE POSITIVE: Information that is either:
-       - Not present in the input context
-       - Significantly distorted from what appears in the input context
-       - Not relevant to the rule it claims to address
-    3. FALSE NEGATIVE: Key information in the input context that should have been extracted according to the rule but was missed
+    STEP 2: STRUCTURAL ANALYSIS
+    Analyze the overall structure of the output:
+    1. Is the document properly organized according to the required format?
+    2. Are all required sections present and in the correct order?
+    3. Are the hierarchical relationships (headers, subheaders, etc.) correctly implemented?
+    4. Is the styling (bold, italic, lists, etc.) applied according to requirements?
     
-    Format your response as a structured JSON with these sections:
+    STEP 3: MARKDOWN SPECIFIC VERIFICATION
+    Verify markdown-specific formatting requirements:
+    1. Are headers formatted correctly using the appropriate number of # symbols?
+    2. Are lists (ordered and unordered) formatted properly?
+    3. Is text emphasis (bold, italic) applied correctly?
+    4. Are code blocks, quotes, or other special markdown elements used correctly?
+    
+    Create a detailed format compliance report as a structured JSON with these sections:
     
     ```json
     {
       "rule_based_verification": {
-        "C1": {
+        "F1": {
           "rule_description": "[Copy the rule description here]",
-          "content_in_output": "[The content found in the output for this rule]",
-          "expected_from_input": "[What should have been extracted from input]",
-          "present": true/false,
-          "accurate": true/false,
-          "complete": true/false,
-          "verification_notes": "[Detailed explanation of your findings]"
+          "compliant": true/false,
+          "evidence": "[Specific text/elements from the output showing compliance or violation]",
+          "issue_details": "[If non-compliant, explain the specific issue]",
+          "severity": "high|medium|low"
         },
-        "C2": {
-          // Same structure as C1
+        "F2": {
+          // Same structure as F1
         },
-        // ... Continue for C3-C10
+        // Continue for all format rules (F3, F4, etc.)
       },
-      "fact_categorization": {
-        "true_positives": [
-          {
-            "rule_id": "C1",
-            "fact_text": "[The correctly extracted fact]",
-            "location_in_input": "[Where this appears in the input]",
-            "verification": "[Why this is correct]"
-          },
-          // Additional true positives
-        ],
-        "false_positives": [
-          {
-            "rule_id": "C3",
-            "incorrect_fact": "[The incorrect information in output]",
-            "actual_input": "[What the input actually says, if anything]",
-            "issue_type": "not_in_input|distortion|irrelevant",
-            "explanation": "[Detailed explanation of the error]"
-          },
-          // Additional false positives
-        ],
-        "false_negatives": [
-          {
-            "rule_id": "C5",
-            "missing_fact": "[Information that should have been included]",
-            "location_in_input": "[Where this appears in the input]",
-            "importance": "critical|important|minor",
-            "explanation": "[Why this information should have been included]"
-          },
-          // Additional false negatives
+      "structural_analysis": {
+        "overall_organization": {
+          "compliant": true/false,
+          "issues_found": ["List of organizational issues, if any"]
+        },
+        "section_presence": {
+          "compliant": true/false,
+          "missing_sections": ["List of missing sections, if any"]
+        },
+        "hierarchical_structure": {
+          "compliant": true/false,
+          "structure_issues": ["List of hierarchy issues, if any"]
+        },
+        "styling_application": {
+          "compliant": true/false,
+          "styling_issues": ["List of styling issues, if any"]
+        }
+      },
+      "markdown_formatting": {
+        "headers": {
+          "compliant": true/false,
+          "issues": ["List of header formatting issues, if any"]
+        },
+        "lists": {
+          "compliant": true/false,
+          "issues": ["List of list formatting issues, if any"]
+        },
+        "text_emphasis": {
+          "compliant": true/false,
+          "issues": ["List of text emphasis issues, if any"]
+        },
+        "special_elements": {
+          "compliant": true/false,
+          "issues": ["List of issues with special markdown elements, if any"]
+        }
+      },
+      "compliance_summary": {
+        "rules_fully_compliant": 0, // Count of fully compliant rules
+        "rules_partially_compliant": 0, // Count of partially compliant rules
+        "rules_non_compliant": 0, // Count of non-compliant rules
+        "overall_compliance_percentage": 0.0, // Percentage of rules followed correctly
+        "critical_violations": 0, // Count of high-severity violations
+        "recommendations": [
+          "Specific recommendations to improve format compliance"
         ]
-      },
-      "summary_statistics": {
-        "rules_fully_satisfied": 0, // Count of rules with present=true, accurate=true, complete=true
-        "rules_partially_satisfied": 0, // Count of rules with some issues
-        "rules_not_satisfied": 0, // Count of rules with major issues
-        "true_positives_count": 0,
-        "false_positives_count": 0,
-        "false_negatives_count": 0
       }
     }
     ```
     
     IMPORTANT VERIFICATION GUIDELINES:
-    - Be extremely thorough in checking EACH of the 10 content rules
-    - For each rule, explicitly state what was found in the output and what was expected based on the input
-    - Pay special attention to facts that might be partially correct but missing important details
-    - Note instances where the output contains speculative information not found in the input
-    - If the input context doesn't contain information related to a specific rule, note this explicitly
-    
-    Your thoroughness in this verification is CRITICAL for an accurate assessment of the output quality.
-    """,
-    agent=fact_verifier,
-    depends_on=[task_extract_rules]  # Or depends on task_validate_rules if you implemented that
-)
+    - Be extremely thorough in checking EACH formatting and structural rule
+    - Provide specific evidence from the output for each rule verification
+    - Be precise about markdown formatting requirements
+    - Consider both explicit rules (clearly stated) and implicit rules (implied by the prompt)
+    - For non-compliant elements, suggest specifi
