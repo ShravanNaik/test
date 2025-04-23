@@ -110,4 +110,11 @@ task_verify_format = Task(
     - Provide specific evidence from the output for each rule verification
     - Be precise about markdown formatting requirements
     - Consider both explicit rules (clearly stated) and implicit rules (implied by the prompt)
-    - For non-compliant elements, suggest specifi
+    - For non-compliant elements, suggest specific corrections
+    
+    Your thoroughness in this verification is CRITICAL for an accurate assessment of the output quality.
+    """,
+    agent=format_verifier,
+    depends_on=[task_extract_rules],  # Or depends on task_validate_rules if implemented
+    expected_output="A structured JSON containing detailed format verification results for each formatting rule, with structural analysis and markdown-specific verification"
+)
